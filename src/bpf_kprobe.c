@@ -10,13 +10,13 @@
 
 int main(int argc, char *argv[])
 {
-	int map_fd;
+    int map_fd;
     int prog_fd;
     int key = 0;
     int ret;
-	long long value;
-	char log_buf[LOG_BUF_SIZE];
-	void *kprobe;
+    long long value;
+    char log_buf[LOG_BUF_SIZE];
+    void *kprobe;
     const char *symbol_name;
 
     if (argc != 2) {
@@ -26,26 +26,26 @@ int main(int argc, char *argv[])
 
     symbol_name = argv[1];
 
-	/* Map size is 1 since we store only one value, the syscall count */
-	map_fd = bpf_create_map(BPF_MAP_TYPE_ARRAY, /* map type */
+    /* Map size is 1 since we store only one value, the syscall count */
+    map_fd = bpf_create_map(BPF_MAP_TYPE_ARRAY, /* map type */
                             sizeof(key),        /* key size */
                             sizeof(value),      /* value size */
                             1,                  /* max entries */
                             0);                 /* flags */
-	if (map_fd < 0) {
-		fprintf(stderr, "failed to create map: %s (ret %d)\n",
+    if (map_fd < 0) {
+        fprintf(stderr, "failed to create map: %s (ret %d)\n",
                 strerror(errno),
                 map_fd);
-		return 1;
-	}
+        return 1;
+    }
 
-	ret = bpf_update_elem(map_fd, &key, &value, 0);
-	if (ret != 0) {
-		fprintf(stderr, "failed to initialize map: %s (ret %d)\n",
+    ret = bpf_update_elem(map_fd, &key, &value, 0);
+    if (ret != 0) {
+        fprintf(stderr, "failed to initialize map: %s (ret %d)\n",
                 strerror(errno),
                 ret);
-		return 1;
-	}
+        return 1;
+    }
 
     struct bpf_insn prog[] = {
         /* Put 0 (the map key) on the stack */
@@ -69,22 +69,22 @@ int main(int argc, char *argv[])
     };
 
 
-	prog_fd = bpf_prog_load(BPF_PROG_TYPE_KPROBE, /* program type */
+    prog_fd = bpf_prog_load(BPF_PROG_TYPE_KPROBE, /* program type */
                             prog,                 /* bpf instructions */
                             sizeof(prog),         /* bpf size */
                             "GPL",                /* code license */
                             LINUX_VERSION_CODE,   /* kernel version */
                             log_buf,              /* log buffer */
                             sizeof(log_buf));     /* log buffer size */
-	if (prog_fd < 0) {
-		fprintf(stderr, "failed to load prog: %s (ret %d); kernel log: %s",
+    if (prog_fd < 0) {
+        fprintf(stderr, "failed to load prog: %s (ret %d); kernel log: %s",
                 strerror(errno),
                 prog_fd,
                 log_buf);
-		return 1;
-	}
+        return 1;
+    }
 
-	kprobe = bpf_attach_kprobe(prog_fd,          /* program fd */
+    kprobe = bpf_attach_kprobe(prog_fd,          /* program fd */
                                BPF_PROBE_ENTRY,  /* probe type */
                                "my_bpf_syscall", /* human readable name */
                                symbol_name,      /* symbol name */
@@ -93,22 +93,22 @@ int main(int argc, char *argv[])
                                -1,               /* group fd */
                                NULL,             /* perf reader callback */
                                NULL);            /* cookie */
-	if (!kprobe) {
-		fprintf(stderr, "failed to attach kprobe: %s\n", strerror(errno));
-		return 1;
-	}
+    if (!kprobe) {
+        fprintf(stderr, "failed to attach kprobe: %s\n", strerror(errno));
+        return 1;
+    }
 
-	for (;;) {
-		ret = bpf_lookup_elem(map_fd, &key, &value);
-		if (ret != 0) {
-			fprintf(stderr, "failed to lookup element: %s (ret %d)\n",
+    for (;;) {
+        ret = bpf_lookup_elem(map_fd, &key, &value);
+        if (ret != 0) {
+            fprintf(stderr, "failed to lookup element: %s (ret %d)\n",
                     strerror(errno),
                     ret);
-		} else {
-			printf("count: %lld\n", value);
-		}
-		sleep(1);
-	}
+        } else {
+            printf("count: %lld\n", value);
+        }
+        sleep(1);
+    }
 
-	return 0;
+    return 0;
 }
